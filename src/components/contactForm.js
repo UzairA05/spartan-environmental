@@ -1,60 +1,58 @@
-// Contact form component with validation
-
 export function createContactForm() {
     return `
-    <form class="contact-form" id="contact-form" action="mailto:info@spartan-enviro.com" method="POST" enctype="text/plain" autocomplete="off" novalidate>
+    <form class="contact-form" id="contact-form" autocomplete="off" novalidate>
       <div class="form-group">
         <label for="name" class="form-label">Full Name *</label>
-        <input 
-          type="text" 
-          id="name" 
-          name="name" 
-          class="form-input" 
+        <input
+          type="text"
+          id="name"
+          name="name"
+          class="form-input"
           required
           autocomplete="off"
           placeholder="John Doe"
         >
         <span class="form-error">Please enter your name</span>
       </div>
-      
+
       <div class="form-group">
         <label for="company" class="form-label">Company</label>
-        <input 
-          type="text" 
-          id="company" 
-          name="company" 
+        <input
+          type="text"
+          id="company"
+          name="company"
           class="form-input"
           autocomplete="off"
           placeholder="Your Company Name"
         >
       </div>
-      
+
       <div class="form-group">
         <label for="email" class="form-label">Email Address *</label>
-        <input 
-          type="email" 
-          id="email" 
-          name="email" 
-          class="form-input" 
+        <input
+          type="email"
+          id="email"
+          name="email"
+          class="form-input"
           required
           autocomplete="off"
           placeholder="john.doe@example.com"
         >
         <span class="form-error">Please enter a valid email address</span>
       </div>
-      
+
       <div class="form-group">
         <label for="phone" class="form-label">Phone Number</label>
-        <input 
-          type="tel" 
-          id="phone" 
-          name="phone" 
+        <input
+          type="tel"
+          id="phone"
+          name="phone"
           class="form-input"
           autocomplete="off"
           placeholder="(587) 439-0790"
         >
       </div>
-      
+
       <div class="form-group">
         <label for="service" class="form-label">Service of Interest</label>
         <select id="service" name="service" class="form-select">
@@ -77,25 +75,26 @@ export function createContactForm() {
           <option value="welding-fume-exposure">Welding Fume Exposure Assessments</option>
         </select>
       </div>
-      
+
       <div class="form-group">
         <label for="message" class="form-label">Message *</label>
-        <textarea 
-          id="message" 
-          name="message" 
-          class="form-textarea" 
+        <textarea
+          id="message"
+          name="message"
+          class="form-textarea"
           required
           autocomplete="off"
           placeholder="Tell us about your project or inquiry..."
         ></textarea>
         <span class="form-error">Please enter a message</span>
       </div>
-      
-      <button type="submit" class="btn btn-primary btn-large">Send Message</button>
+
+      <button type="submit" class="btn btn-primary btn-large" id="submit-btn">Send Message</button>
+      <div class="form-submit-error" id="form-submit-error" style="display:none; color: var(--color-error, #dc2626); margin-top: var(--space-sm); font-size: var(--font-size-sm);"></div>
     </form>
-    
+
     <div class="form-success" id="form-success" style="display: none;">
-      <p>✓ Thank you for your message! We'll get back to you within 24 hours.</p>
+      <p>Thank you for your message! We'll get back to you within 24 hours.</p>
     </div>
   `;
 }
@@ -104,24 +103,20 @@ export function initializeContactForm() {
     const form = document.getElementById('contact-form');
     if (!form) return;
 
-    form.addEventListener('submit', (e) => {
+    form.addEventListener('submit', async (e) => {
         e.preventDefault();
 
-        // Validate form
         let isValid = true;
         const requiredFields = form.querySelectorAll('[required]');
 
         requiredFields.forEach(field => {
             const formGroup = field.closest('.form-group');
-
             if (!field.value.trim()) {
                 formGroup.classList.add('has-error');
                 isValid = false;
             } else {
                 formGroup.classList.remove('has-error');
             }
-
-            // Email validation
             if (field.type === 'email' && field.value.trim()) {
                 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
                 if (!emailRegex.test(field.value)) {
@@ -131,48 +126,63 @@ export function initializeContactForm() {
             }
         });
 
-        if (isValid) {
-          const formData = new FormData(form);
-          const name = formData.get('name')?.toString().trim() || '';
-          const company = formData.get('company')?.toString().trim() || '';
-          const email = formData.get('email')?.toString().trim() || '';
-          const phone = formData.get('phone')?.toString().trim() || '';
-          const service = formData.get('service')?.toString().trim() || '';
-          const message = formData.get('message')?.toString().trim() || '';
+        if (!isValid) return;
 
-          const subject = `Website Contact: ${name || 'New Inquiry'}`;
-          const bodyLines = [
-            `Name: ${name}`,
-            `Company: ${company}`,
-            `Email: ${email}`,
-            `Phone: ${phone}`,
-            `Service: ${service}`,
-            '',
-            'Message:',
-            message
-          ];
-          const body = bodyLines.join('\n');
-          const mailtoUrl = `mailto:info@spartan-enviro.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+        const submitBtn = document.getElementById('submit-btn');
+        const errorEl = document.getElementById('form-submit-error');
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Sending...';
+        errorEl.style.display = 'none';
 
-          window.location.href = mailtoUrl;
+        const formData = new FormData(form);
+        const payload = {
+            name: formData.get('name')?.toString().trim() || '',
+            company: formData.get('company')?.toString().trim() || '',
+            email: formData.get('email')?.toString().trim() || '',
+            phone: formData.get('phone')?.toString().trim() || '',
+            service: formData.get('service')?.toString().trim() || '',
+            message: formData.get('message')?.toString().trim() || '',
+        };
 
-          form.style.display = 'none';
-          document.getElementById('form-success').style.display = 'block';
+        try {
+            const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+            const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-          setTimeout(() => {
-            form.reset();
-            form.style.display = 'block';
-            document.getElementById('form-success').style.display = 'none';
-          }, 5000);
+            const res = await fetch(`${supabaseUrl}/functions/v1/send-contact-email`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${supabaseAnonKey}`,
+                },
+                body: JSON.stringify(payload),
+            });
+
+            if (!res.ok) {
+                throw new Error('Submission failed');
+            }
+
+            form.style.display = 'none';
+            document.getElementById('form-success').style.display = 'block';
+
+            setTimeout(() => {
+                form.reset();
+                form.style.display = 'block';
+                document.getElementById('form-success').style.display = 'none';
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Send Message';
+            }, 5000);
+        } catch {
+            errorEl.textContent = 'Something went wrong. Please try again or email us directly at info@spartan-enviro.com.';
+            errorEl.style.display = 'block';
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Send Message';
         }
     });
 
-    // Remove error on input
     const inputs = form.querySelectorAll('.form-input, .form-select, .form-textarea');
     inputs.forEach(input => {
         input.addEventListener('input', () => {
-            const formGroup = input.closest('.form-group');
-            formGroup.classList.remove('has-error');
+            input.closest('.form-group').classList.remove('has-error');
         });
     });
 }
