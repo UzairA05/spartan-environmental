@@ -1,5 +1,10 @@
 // Main application entry point
 
+import './styles/main.css';
+import './styles/components.css';
+import './styles/animations.css';
+import './styles/responsive.css';
+
 import router from './router.js';
 import { createHeader } from './components/header.js';
 import { createFooter } from './components/footer.js';
